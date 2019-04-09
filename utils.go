@@ -56,12 +56,16 @@ func calcSynchsafe(data []byte) int {
 }
 
 
-func areBytesOk(reader *bufio.Reader, size int, check func([]byte) bool) bool {
+// areBytesOk is a test runner. It receives a Reader, a number of
+// bytes to read, and a test function to pass those bytes to. The
+// test function must receive a slice of bytes and return a bool.
+// areBytesOk will return the return of the test function.
+func areBytesOk(reader *bufio.Reader, size int, test func([]byte) bool) bool {
 	data, err := reader.Peek(size)
 	if err != nil {
 		return false
 	}
-	return check(data)
+	return test(data)
 }
 
 
@@ -152,4 +156,20 @@ func toUTF16(data []byte) []uint16 {
 		s = append(s, uint16(data[i])<<shift0|uint16(data[i+1])<<shift1)
 	}
 	return s
+}
+
+// boolFromByte is a convenience function. It receives a byte and a
+// number indicating a bit position in that byte. It returns a bool
+// indicating the value of that bit (0 = false, 1 = true).
+func boolFromByte(byte byte, pos int) bool {
+	if pos > 7 {
+		return false
+	}
+
+	// Example:
+	// Flag: 1000 0000
+	//    1: 0000 0001
+	// 1<<7: 1000 0000
+	//  F&1: 1000 0000
+	return (byte & (1 << pos)) == 1
 }

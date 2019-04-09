@@ -56,6 +56,8 @@ type ID3v2Frame struct {
 type ID3v2FrameHeader struct {
 	Id    string
 	Size  int
+	// This could be a struct of booleans or just add booleans to
+	// this struct like with the TagHeader.  @TODO
 	Flags []byte
 }
 
@@ -76,13 +78,14 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Could not open %s: %s\n", arg, err)
 			return
 		}
-		reader := bufio.NewReader(handle)
 
-		tag_header, err := getID3v2TagHeader(reader)
-		if err != nil {
-			fmt.Println(err)
+		reader := bufio.NewReader(handle)
+		if fileHasID3v2Tag(reader) == false {
+			fmt.Fprintf(os.Stderr, "Unable to read ID3 tag: not present in file '%s'.\n", arg)
 			return
 		}
+
+		tag_header := getID3v2TagHeader(reader)
 		printHeader(tag_header)
 
 		// Update the reader so it will return EOF at the end of the tag.
@@ -91,9 +94,6 @@ func main() {
 		if tag_header.Version == 4 {
 			frames := v24GetFrames(reader)
 			v24PrintFrames(frames)
-			// for _, frame := range frames {
-			// 	printFrame(frame)
-			// }
 		} else if tag_header.Version == 3 {
 			v23GetFrames(reader)
 		} else if tag_header.Version == 2 {
@@ -104,9 +104,58 @@ func main() {
 	}
 }
 
+// fileHasID3v2Tag receives a Reader and returns a boolean indicating
+// whether the file being read by that Reader contains an ID3 tag.
+func fileHasID3v2Tag(reader *bufio.Reader) bool {
+	// This check is very limited. It isn't necessary for the ID3 tag
+	// to occur at the beginning of the file. They can also occur at
+	// the end.  @TODO
+	checkTag := func (bytes []byte) bool {
+		return (bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3')
+	}
+	return areBytesOk(reader, 3, checkTag)
+}
+
+// getID3v2TagHeader receives a Reader and returns a struct containing
+// the tag's header information.
+// The tag's header will contain ten bytes:
+// 0-2: the characters "ID3"
+// 3-4: the version number
+//      - first byte is the version's major number
+//        So `04` here indicates v2.4
+//      - second byte is the minor version
+//        So `00` here indicates v2.4.0
+// 5: flags: bitwise/boolean indicators of:
+//    7th bit: Unsynchronisation
+//    6th bit: Extended header
+//    5th bit: Experimental indicator
+//    4th bit: Footer present
+//    Followed by four blank bits
+// 6-9: size of the entire tag encoded in synchsafe integer
+func getID3v2TagHeader(reader *bufio.Reader) ID3v2TagHeader {
+	data := readBytes(reader, 10)
+
+	header := ID3v2TagHeader{ }
+
+	header.Version = int(data[3])
+	header.MinorVersion = int(data[4])
+
+	header.Unsynchronization = boolFromByte(data[5], 7)
+	header.Extended = boolFromByte(data[5], 6)
+	header.Experimental = boolFromByte(data[5], 5)
+	header.Footer = boolFromByte(data[5], 4)
+
+	header.Size = calcSynchsafe(data[6:])
+
+	return header
+}
+
+
+
 
 
 /*
+
 For a full reference on ID3v2 tags: http://id3.org/id3v2.4.0-structure
 
 Quick reference:
@@ -117,58 +166,6 @@ A "tag" consists of
   character strings
 - padding or a footer
 
-The tag's header will contain ten bytes:
-0-2: the characters "ID3"
-3-4: the version number
-     - first byte is the version's major number
-       So `04` here indicates v2.4
-     - second byte is the minor version
-       So `00` here indicates v2.4.0
-5: flags: bitwise/boolean indicators of:
-   7th bit: Unsynchronisation
-   6th bit: Extended header
-   5th bit: Experimental indicator
-   4th bit: Footer present
-   Followed by four blank bits
-6-9: size of the entire tag
-   
-*/
-
-func getID3v2TagHeader(reader *bufio.Reader) (ID3v2TagHeader, error) {
-	header := ID3v2TagHeader{ }
-
-	// If the first three bytes aren't ID3, there's no need to proceed.
-	checkTag := func (bytes []byte) bool {
-		return (bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3')
-	}
-	if (!areBytesOk(reader, 3, checkTag)) {
-		return header, errors.New("Unable to read ID3 tags: invalid tag format.")
-	}
-
-	// It isn't necessary for the ID3 tag to occur at the beginning
-	// of the file -- they can also occur at the end.  @TODO
-	data := readBytes(reader, 10)
-
-	header.Version = int(data[3])
-	header.MinorVersion = int(data[4])
-	// Flag: 1000 0000
-	//    1: 0000 0001
-	// 1<<7: 1000 0000
-	//  F&1: 1000 0000
-	header.Unsynchronization = (data[5] & (1 << 7)) != 0
-	header.Extended = (data[5] & (1 << 6)) != 0
-	header.Experimental = (data[5] & (1 << 5)) != 0
-	header.Footer = (data[5] & (1 << 4)) != 0
-	header.Size = calcSynchsafe(data[6:])
-
-	return header, nil
-}
-
-
-
-
-
-/*
 The shape of a frame is:
 - header (10 bytes, like the tag header).
   0-3: Four characters ID'ing the frame
@@ -189,12 +186,6 @@ So the process of getting a frame's data is much like getting a tag's
 header data: read and parse the first ten bytes, read from there up
 to the specified size, decode the results.
 
-*/
-
-
-
-
-/*
 FOOTER:
   +-----------------------------+
   |      Header (10 bytes)      |
