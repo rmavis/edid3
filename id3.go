@@ -61,6 +61,10 @@ type ID3v2FrameHeader struct {
 	Flags []byte
 }
 
+type VersionManager struct {
+	ReadFrames  func(*bufio.Reader) []ID3v2Frame
+	PrintFrames func([]ID3v2Frame)
+}
 
 
 func main() {
@@ -91,10 +95,12 @@ func main() {
 		// Update the reader so it will return EOF at the end of the tag.
 		file_reader = bufio.NewReader(io.LimitReader(file_reader, int64(tag_header.Size)))
 
+		var manager VersionManager
 		if tag_header.Version == 4 {
 			// v24GetFrames(file_reader)
-			frames := v24GetFrames(file_reader)
-			v24PrintFrames(frames)
+			manager = v24GetManager()
+			frames := manager.ReadFrames(file_reader)
+			manager.PrintFrames(frames)
 		} else if tag_header.Version == 3 {
 			v23GetFrames(file_reader)
 		} else if tag_header.Version == 2 {

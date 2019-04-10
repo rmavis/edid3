@@ -6,7 +6,14 @@ import (
 )
 
 
-func v24GetFrames(reader *bufio.Reader) []ID3v2Frame {
+func v24GetManager() VersionManager {
+	manager := VersionManager{ }
+	manager.ReadFrames = v24ReadFrames
+	manager.PrintFrames = v24PrintFrames
+	return manager
+}
+
+func v24ReadFrames(reader *bufio.Reader) []ID3v2Frame {
 	checkId := func (bytes []byte) bool {
 		for _, byte := range bytes {
 			if ((byte < 'A' || byte > 'Z') && (byte < '0' || byte > '9')) {
@@ -34,7 +41,6 @@ func v24GetFrames(reader *bufio.Reader) []ID3v2Frame {
 	return frames
 }
 
-
 func v24PrintFrames(frames []ID3v2Frame) {
 	for _, frame := range frames {
 		if frame.Header.Id[0:1] == "T" {
@@ -44,7 +50,6 @@ func v24PrintFrames(frames []ID3v2Frame) {
 		}
 	}
 }
-
 
 func v24PrintTextFrame(frame ID3v2Frame) {
 	var key string
