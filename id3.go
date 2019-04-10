@@ -9,7 +9,7 @@ import (
 )
 
 
-// Full reference: http://id3.org/id3v2.4.0-structure
+// Full reference: http://id3.org/
 
 
 /*
@@ -79,26 +79,26 @@ func main() {
 			return
 		}
 
-		reader := bufio.NewReader(handle)
-		if fileHasID3v2Tag(reader) == false {
+		file_reader := bufio.NewReader(handle)
+		if fileHasID3v2Tag(file_reader) == false {
 			fmt.Fprintf(os.Stderr, "Unable to read ID3 tag: not present in file '%s'.\n", arg)
 			return
 		}
 
-		tag_header := getID3v2TagHeader(reader)
+		tag_header := getID3v2TagHeader(file_reader)
 		printHeader(tag_header)
 
 		// Update the reader so it will return EOF at the end of the tag.
-		reader = bufio.NewReader(io.LimitReader(reader, int64(tag_header.Size)))
+		file_reader = bufio.NewReader(io.LimitReader(file_reader, int64(tag_header.Size)))
 
 		if tag_header.Version == 4 {
-			// v24GetFrames(reader)
-			frames := v24GetFrames(reader)
+			// v24GetFrames(file_reader)
+			frames := v24GetFrames(file_reader)
 			v24PrintFrames(frames)
 		} else if tag_header.Version == 3 {
-			v23GetFrames(reader)
+			v23GetFrames(file_reader)
 		} else if tag_header.Version == 2 {
-			v22GetFrames(reader)
+			v22GetFrames(file_reader)
 		} else {
 			panic(fmt.Sprintf("Unrecognized ID3v2 version: %d", tag_header.Version))
 		}
@@ -150,123 +150,3 @@ func getID3v2TagHeader(reader *bufio.Reader) ID3v2TagHeader {
 
 	return header
 }
-
-
-
-
-
-/*
-
-For a full reference on ID3v2 tags: http://id3.org/id3v2.4.0-structure
-
-Quick reference:
-A "tag" consists of
-- a header
-- one or more "frames", each of which comprise a key-value pair,
-  the keys being part of the pre-defined set, the values being
-  character strings
-- padding or a footer
-
-The shape of a frame is:
-- header (10 bytes, like the tag header).
-  0-3: Four characters ID'ing the frame
-  4-7: Four bytes indicating the size (synchsafe)
-  8-9: Two bytes containing flags
-- body
-  The default character encoding is ISO-8859-1, but others are
-  allowed if a flag is set that specifies the encoding:
-     $00   ISO-8859-1 [ISO-8859-1]. Terminated with $00.
-     $01   UTF-16 [UTF-16] encoded Unicode [UNICODE] with BOM. All
-           strings in the same frame SHALL have the same byteorder.
-           Terminated with $00 00.
-     $02   UTF-16BE [UTF-16] encoded Unicode [UNICODE] without BOM.
-           Terminated with $00 00.
-     $03   UTF-8 [UTF-8] encoded Unicode [UNICODE]. Terminated with $00.
-
-So the process of getting a frame's data is much like getting a tag's
-header data: read and parse the first ten bytes, read from there up
-to the specified size, decode the results.
-
-FOOTER:
-  +-----------------------------+
-  |      Header (10 bytes)      |
-  +-----------------------------+
-  |       Extended Header       |
-  | (variable length, OPTIONAL) |
-  +-----------------------------+
-  |   Frames (variable length)  |
-  +-----------------------------+
-  |           Padding           |
-  | (variable length, OPTIONAL) |
-  +-----------------------------+
-  | Footer (10 bytes, OPTIONAL) |
-  +-----------------------------+
-
-The footer is a copy of the header, but with a different
-   identifier.
-
-     ID3v2 identifier           "3DI"
-     ID3v2 version              $04 00
-     ID3v2 flags                %abcd0000
-     ID3v2 size             4 * %0xxxxxxx
-*/
-
-
-
-
-/*
-
-420
-101
-(4 x 1) + (2 x 0) + 1 = 5
-110 = 6
-111
-(4x1)+(2x1)+1 = 7
-
-0xAC -> 172
-16 0
- A C
-A = 10
-C = 13
-(16 x 10) + 12 = 172
-
-*/
-
-
-
-/*
-
-SYNCHSAFE INTEGER CALCULATION
-
-Pass 1:
-size: 00000000 00000000 00000000 00000000
-shift: 21
-b: 01010101
-size: 
-  01010101
-& 01111111
-= 01010101
-  00000000 00000000 00000000 00000000
-|                            01010101
-= 00000000 00000000 00000000 01010101
-!=00001010 10100000 00000000 00000000
-
-Pass 2:
-size: 00001010 10100000 00000000 00000000
-shift: 14
-b: 01010101
-size:
-  00001010 10100000 00000000 00000000
-             010101 01000000 00000000
-!=00001010 10110101 01000000 00000000
-
-*/
-
-
-/*
-PROCESS FOR READING FRAMES:
-- Get header, which will contain size information
-- Get slice of bytes from end of header through point indicated by size
-  (size - 10)
-
-*/

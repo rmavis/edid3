@@ -237,3 +237,60 @@ func v24PrintTextFrame(frame ID3v2Frame) {
 "WXXX" = null,
 
 */
+
+
+/*
+
+For a full reference on ID3v2 tags: http://id3.org/id3v2.4.0-structure
+
+Quick reference:
+A "tag" consists of
+- a header
+- one or more "frames", each of which comprise a key-value pair,
+  the keys being part of the pre-defined set, the values being
+  character strings
+- padding or a footer
+
+The shape of a frame is:
+- header (10 bytes, like the tag header).
+  0-3: Four characters ID'ing the frame
+  4-7: Four bytes indicating the size (synchsafe)
+  8-9: Two bytes containing flags
+- body
+  The default character encoding is ISO-8859-1, but others are
+  allowed if a flag is set that specifies the encoding:
+     $00   ISO-8859-1 [ISO-8859-1]. Terminated with $00.
+     $01   UTF-16 [UTF-16] encoded Unicode [UNICODE] with BOM. All
+           strings in the same frame SHALL have the same byteorder.
+           Terminated with $00 00.
+     $02   UTF-16BE [UTF-16] encoded Unicode [UNICODE] without BOM.
+           Terminated with $00 00.
+     $03   UTF-8 [UTF-8] encoded Unicode [UNICODE]. Terminated with $00.
+
+So the process of getting a frame's data is much like getting a tag's
+header data: read and parse the first ten bytes, read from there up
+to the specified size, decode the results.
+
+FOOTER:
+  +-----------------------------+
+  |      Header (10 bytes)      |
+  +-----------------------------+
+  |       Extended Header       |
+  | (variable length, OPTIONAL) |
+  +-----------------------------+
+  |   Frames (variable length)  |
+  +-----------------------------+
+  |           Padding           |
+  | (variable length, OPTIONAL) |
+  +-----------------------------+
+  | Footer (10 bytes, OPTIONAL) |
+  +-----------------------------+
+
+The footer is a copy of the header, but with a different
+   identifier.
+
+     ID3v2 identifier           "3DI"
+     ID3v2 version              $04 00
+     ID3v2 flags                %abcd0000
+     ID3v2 size             4 * %0xxxxxxx
+*/
