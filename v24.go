@@ -20,7 +20,7 @@ func v24GetFrames(reader *bufio.Reader) []ID3v2Frame {
 	for areBytesOk(reader, 4, checkId) {
 		header := ID3v2FrameHeader{ }
 		header.Id = string(readBytes(reader, 4))
-		header.Size = calcSynchsafe(readBytes(reader, 4))
+		header.Size = synchsafeBytesToInt(readBytes(reader, 4))
 		// Need to parse and appropriately handle these flags  @TODO
 		header.Flags = readBytes(reader, 2)
 

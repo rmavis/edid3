@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	"errors"
+	//"errors"
 	"fmt"
 	"io"
 	"os"
@@ -92,6 +92,7 @@ func main() {
 		reader = bufio.NewReader(io.LimitReader(reader, int64(tag_header.Size)))
 
 		if tag_header.Version == 4 {
+			// v24GetFrames(reader)
 			frames := v24GetFrames(reader)
 			v24PrintFrames(frames)
 		} else if tag_header.Version == 3 {
@@ -145,7 +146,7 @@ func getID3v2TagHeader(reader *bufio.Reader) ID3v2TagHeader {
 	header.Experimental = boolFromByte(data[5], 5)
 	header.Footer = boolFromByte(data[5], 4)
 
-	header.Size = calcSynchsafe(data[6:])
+	header.Size = synchsafeBytesToInt(data[6:])
 
 	return header
 }

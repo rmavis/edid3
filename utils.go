@@ -21,7 +21,6 @@ func printHeader(head ID3v2TagHeader) {
 	fmt.Println()
 }
 
-
 func printFrame(frame ID3v2Frame) {
 	fmt.Println("Frame Information:")
 	fmt.Printf("ID: %v\n", frame.Header.Id)
@@ -31,15 +30,14 @@ func printFrame(frame ID3v2Frame) {
 	fmt.Println()
 }
 
-
 // The `size` field of a header comprises the last four bytes. Each
 // of those bytes uses only seven of the eight available bits (in
 // effort to prevent the occurrence a sequence of twelve 1s, which
 // is used as a "sync" signifier or chunk/field header in the body
 // of the file's music data). This is called "synchsafe".
-// So `calcSynchsafe` receives a slice of bytes and returns the
-// value encoded therein as an integer.
-func calcSynchsafe(data []byte) int {
+// So `synchsafeBytesToInt` receives a slice of bytes and returns
+// the value encoded therein as an integer.
+func synchsafeBytesToInt(data []byte) int {
 	size := int(0)
 	for i, b := range data {
 		//    b: 0111 1111
@@ -52,9 +50,35 @@ func calcSynchsafe(data []byte) int {
 		shift := uint(len(data) - i - 1) * 7  // 21, 14, 7, 0
 		size |= int(b & 0x7f) << shift
 	}
+	// fmt.Printf("WANT TO CONVERT %v\n", data)
+	// synchsafeIntToBytes(size)
 	return size
 }
 
+func synchsafeIntToBytes(size int) []byte {
+	//fmt.Printf("CONVERTING %v\n", size)
+	var bytes []byte
+	swing := int(0)
+	for n := 0 ; swing <= size ; n++ {
+		swing = (0x7f << uint(7 * n))
+		byte := uint8((size & swing) >> uint(7 * n))
+		bytes = append(bytes, byte)
+		//fmt.Printf("N: %v, SWING: %v, BYTE: %v, BYTES: %v\n", n, swing, byte, bytes)
+	}
+	for len(bytes) < 4 {
+		bytes = append(bytes, uint8(0))
+	}
+	reverse(bytes)
+	//fmt.Printf("CONVERTED %v to %v\n", size, bytes)
+	return bytes
+}
+
+// reverse reverses a slice of bytes in place.
+func reverse(bytes []byte) {
+	for i, j := 0, len(bytes)-1; i < j; i, j = i+1, j-1 {
+		bytes[i], bytes[j] = bytes[j], bytes[i]
+	}
+}
 
 // areBytesOk is a test runner. It receives a Reader, a number of
 // bytes to read, and a test function to pass those bytes to. The
@@ -67,7 +91,6 @@ func areBytesOk(reader *bufio.Reader, size int, test func([]byte) bool) bool {
 	}
 	return test(data)
 }
-
 
 func readBytes(reader *bufio.Reader, c int) []byte {
 	bytes := make([]byte, c)
@@ -83,7 +106,6 @@ func readBytes(reader *bufio.Reader, c int) []byte {
 
 	return bytes
 }
-
 
 func readString(reader *bufio.Reader, size int) string {
 	return parseString(readBytes(reader, size))
@@ -118,7 +140,6 @@ func parseString(data []byte) string {
 	return strings.TrimRight(s, "\u0000")
 }
 
-
 func ISO8859_1ToUTF8(data []byte) string {
 	p := make([]rune, len(data))
 	for i, b := range data {
@@ -126,7 +147,6 @@ func ISO8859_1ToUTF8(data []byte) string {
 	}
 	return string(p)
 }
-
 
 func toUTF16(data []byte) []uint16 {
 	if len(data) < 2 {
@@ -171,5 +191,5 @@ func boolFromByte(byte byte, pos int) bool {
 	//    1: 0000 0001
 	// 1<<7: 1000 0000
 	//  F&1: 1000 0000
-	return (byte & (1 << pos)) == 1
+	return (byte & (1 << uint(pos))) == 1
 }
