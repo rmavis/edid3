@@ -193,3 +193,15 @@ func boolFromByte(byte byte, pos int) bool {
 	//  F&1: 1000 0000
 	return (byte & (1 << uint(pos))) == 1
 }
+
+// Use makeMap to make a map from a slice of string tuples.
+// The function parameter should return two strings. The first will
+// be used as the map's keys, the second as the values.
+func makeMap(parts [][2]string, pull func([2]string) (string, string)) map[string]string {
+	_map := make(map[string]string)
+	for _, part := range parts {
+		key, val := pull(part)
+		_map[key] = val
+	}
+	return _map
+}

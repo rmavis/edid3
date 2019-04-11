@@ -148,12 +148,7 @@ func v24MakeFrameMap(pull func([2]string) (string, string)) map[string]string {
 		[2]string{"WXXX", "User defined URL link frame"},
 	}
 
-	_map := make(map[string]string)
-	for _, part := range parts {
-		key, val := pull(part)
-		_map[key] = val
-	}
-	return _map
+	return makeMap(parts[:], pull)
 }
 
 
