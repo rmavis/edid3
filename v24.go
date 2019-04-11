@@ -6,11 +6,14 @@ import (
 )
 
 
-func v24GetManager() Item {
-	manager := Item{ }
-	manager.ReadFrames = v24ReadFrames
-	manager.PrintFrames = v24PrintFrames
-	return manager
+func v24GetManager(path string, reader *bufio.Reader) *Item {
+	item := Item{ }
+	item.Path = path
+	item.ReadFrames = func () []ID3v2Frame {
+		return v24ReadFrames(reader)
+	}
+	item.PrintFrames = v24PrintFrames
+	return &item
 }
 
 func v24ReadFrames(reader *bufio.Reader) []ID3v2Frame {

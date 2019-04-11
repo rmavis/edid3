@@ -10,66 +10,6 @@ import (
 )
 
 
-// Full reference: http://id3.org/
-
-
-/*
-
-TODO
-- It isn't necessary for the ID3 tag to occur at the beginning of the
-  file -- they can also occur at the end, or presumably anywhere else.
-- What about pulling/scanning for a tag from the end of the file? A
-  tag with a footer must appear at the end of a file.
-- In `readBytes`
-- In `v24GetFrames`
-- What about being a little more fault-tolerant?
-  Would that involve a lot of work? I'm slightly concerned
-  about the position of the reader and the contents of the
-  file. The reader relies on the contents of the file being
-  in the right/required/specified place, assuming all is as
-  specified in the spec. What if there are extraneous bytes?
-  What if the `size` value in the header is wrong?
-
-*/
-
-
-
-type ID3v2Tag struct {
-	Header ID3v2TagHeader
-	Frames []ID3v2Frame
-}
-
-type ID3v2TagHeader struct {
-	Version           int
-	MinorVersion      int
-	Unsynchronization bool
-	Extended          bool
-	Experimental      bool
-	Footer            bool
-	Size              int
-}
-
-type ID3v2Frame struct {
-	Header ID3v2FrameHeader
-	Body   []byte
-}
-
-type ID3v2FrameHeader struct {
-	Id    string
-	Size  int
-	// This could be a struct of booleans or just add booleans to
-	// this struct like with the TagHeader.  @TODO
-	Flags []byte
-}
-
-type Item struct {
-	Path        string
-	Tag         ID3v2Tag
-	ReadFrames  func(*bufio.Reader) []ID3v2Frame
-	PrintFrames func([]ID3v2Frame)
-}
-
-
 func main() {
 	if len(os.Args) == 1 {
 		fmt.Printf("Usage: %s [path(s) to mp3 file]\n", os.Args[0])
@@ -97,14 +37,13 @@ func main() {
 		}
 
 		tag_header := getID3v2TagHeader(file_reader)
-		//printHeader(tag_header)
 
 		// Update the reader so it will return EOF at the end of the tag.
 		file_reader = bufio.NewReader(io.LimitReader(file_reader, int64(tag_header.Size)))
 
-		var item Item
+		var item *Item
 		if tag_header.Version == 4 {
-			item = v24GetManager()
+			item = v24GetManager(path, file_reader)
 		} else if tag_header.Version == 3 {
 			v23GetFrames(file_reader)
 		} else if tag_header.Version == 2 {
@@ -112,9 +51,7 @@ func main() {
 		} else {
 			panic(fmt.Sprintf("Unrecognized ID3v2 version: %d", tag_header.Version))
 		}
-		item.Path = path
-		item.Tag.Header = tag_header
-		item.Tag.Frames = item.ReadFrames(file_reader)
+		makeItemTag(item, tag_header)
 
 		printItemData(item)
 	}
@@ -166,7 +103,12 @@ func getID3v2TagHeader(reader *bufio.Reader) ID3v2TagHeader {
 	return header
 }
 
-func printItemData(item Item) {
+func makeItemTag(item *Item, header ID3v2TagHeader) {
+	item.Tag.Header = header
+	item.Tag.Frames = item.ReadFrames()
+}
+
+func printItemData(item *Item) {
 	fmt.Printf("[%v]\n", item.Path)
 	item.PrintFrames(item.Tag.Frames)
 }

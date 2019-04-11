@@ -1,0 +1,7 @@
+* TODO
+- It isn't necessary for the ID3 tag to occur at the beginning of the file -- they can also occur at the end, or presumably anywhere else.
+- What about pulling/scanning for a tag from the end of the file? A tag with a footer must appear at the end of a file.
+- In `readBytes`
+- In `v24GetFrames`
+- What about being a little more fault-tolerant? Would that involve a lot of work? I'm slightly concerned
+  about the position of the reader and the contents of the file. The reader relies on the contents of the file being in the right/required/specified place, assuming all is as specified in the spec. What if there are extraneous bytes? What if the `size` value in the header is wrong?

@@ -4,6 +4,8 @@ This is a command line tool for reading ID3 tags from MP3 files.
 
 It's a stub---not ready to be used for anything meaningful yet, but a decent start.
 
+For a full reference, see http://id3.org/.
+
 
 ## Usage
 
