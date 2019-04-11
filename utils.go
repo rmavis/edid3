@@ -21,6 +21,7 @@ func printHeader(head ID3v2TagHeader) {
 	fmt.Println()
 }
 
+// This isn't being used?  @TODO
 func printFrame(frame ID3v2Frame) {
 	fmt.Println("Frame Information:")
 	fmt.Printf("ID: %v\n", frame.Header.Id)
@@ -110,7 +111,6 @@ func readBytes(reader *bufio.Reader, c int) []byte {
 func readString(reader *bufio.Reader, size int) string {
 	return parseString(readBytes(reader, size))
 }
-
 
 // Parses a string from frame data. The first byte represents the encoding:
 //   0x01  ISO-8859-1

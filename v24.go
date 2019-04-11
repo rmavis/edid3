@@ -6,8 +6,8 @@ import (
 )
 
 
-func v24GetManager() VersionManager {
-	manager := VersionManager{ }
+func v24GetManager() Item {
+	manager := Item{ }
 	manager.ReadFrames = v24ReadFrames
 	manager.PrintFrames = v24PrintFrames
 	return manager

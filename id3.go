@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 
@@ -61,7 +62,9 @@ type ID3v2FrameHeader struct {
 	Flags []byte
 }
 
-type VersionManager struct {
+type Item struct {
+	Path        string
+	Tag         ID3v2Tag
 	ReadFrames  func(*bufio.Reader) []ID3v2Frame
 	PrintFrames func([]ID3v2Frame)
 }
@@ -74,33 +77,34 @@ func main() {
 	}
 
 	for _, arg := range os.Args[1:] {
-		fmt.Println(arg)
+		path, err := filepath.Abs(arg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Path '%s' appears to be invalid: %s\n", path, err)
+			return
+		}
 
-		handle, err := os.Open(arg)
+		handle, err := os.Open(path)
 		defer handle.Close()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not open %s: %s\n", arg, err)
+			fmt.Fprintf(os.Stderr, "Could not open file '%s': %s\n", path, err)
 			return
 		}
 
 		file_reader := bufio.NewReader(handle)
 		if fileHasID3v2Tag(file_reader) == false {
-			fmt.Fprintf(os.Stderr, "Unable to read ID3 tag: not present in file '%s'.\n", arg)
+			fmt.Fprintf(os.Stderr, "Unable to read ID3 tag: not present in file '%s'.\n", path)
 			return
 		}
 
 		tag_header := getID3v2TagHeader(file_reader)
-		printHeader(tag_header)
+		//printHeader(tag_header)
 
 		// Update the reader so it will return EOF at the end of the tag.
 		file_reader = bufio.NewReader(io.LimitReader(file_reader, int64(tag_header.Size)))
 
-		var manager VersionManager
+		var item Item
 		if tag_header.Version == 4 {
-			// v24GetFrames(file_reader)
-			manager = v24GetManager()
-			frames := manager.ReadFrames(file_reader)
-			manager.PrintFrames(frames)
+			item = v24GetManager()
 		} else if tag_header.Version == 3 {
 			v23GetFrames(file_reader)
 		} else if tag_header.Version == 2 {
@@ -108,6 +112,11 @@ func main() {
 		} else {
 			panic(fmt.Sprintf("Unrecognized ID3v2 version: %d", tag_header.Version))
 		}
+		item.Path = path
+		item.Tag.Header = tag_header
+		item.Tag.Frames = item.ReadFrames(file_reader)
+
+		printItemData(item)
 	}
 }
 
@@ -155,4 +164,9 @@ func getID3v2TagHeader(reader *bufio.Reader) ID3v2TagHeader {
 	header.Size = synchsafeBytesToInt(data[6:])
 
 	return header
+}
+
+func printItemData(item Item) {
+	fmt.Printf("[%v]\n", item.Path)
+	item.PrintFrames(item.Tag.Frames)
 }
