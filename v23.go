@@ -31,28 +31,15 @@ func v23FillHeader(header *ID3v2TagHeader, data []byte) {
 }
 
 func v23ReadFrames(reader *bufio.Reader) []ID3v2Frame {
-	checkId := func (bytes []byte) bool {
-		for _, byte := range bytes {
-			if ((byte < 'A' || byte > 'Z') && (byte < '0' || byte > '9')) {
-				return false
-			}
-		}
-		return true
-	}
-
 	var frames []ID3v2Frame
-	for areBytesOk(reader, V23TAGIDSIZE, checkId) {
+	for areBytesOk(reader, V23TAGIDSIZE, areBytesValidFrameId) {
 		header := ID3v2FrameHeader{ }
 		header.Id = string(readBytes(reader, V23TAGIDSIZE))
 		header.Size = bytesToInt(readBytes(reader, V23TAGSIZESIZE))
 		// Need to parse and appropriately handle these flags  @TODO
 		header.Flags = readBytes(reader, V23TAGFLAGSSIZE)
 
-		frame := ID3v2Frame{ }
-		frame.Header = header
-		frame.Body = readBytes(reader, header.Size)
-
-		frames = append(frames, frame)
+		frames = append(frames, makeFrame(reader, header))
 	}
 
 	return frames

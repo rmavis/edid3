@@ -32,6 +32,15 @@ func printFrame(frame ID3v2Frame) {
 	fmt.Println()
 }
 
+func areBytesValidFrameId(bytes []byte) bool {
+	for _, byte := range bytes {
+		if ((byte < 'A' || byte > 'Z') && (byte < '0' || byte > '9')) {
+			return false
+		}
+	}
+	return true
+}
+
 // The `size` field of a header comprises the last four bytes. Each
 // of those bytes uses only seven of the eight available bits (in
 // effort to prevent the occurrence a sequence of twelve 1s, which
@@ -223,4 +232,11 @@ func makeMap(parts [][2]string, pull func([2]string) (string, string)) map[strin
 		_map[key] = val
 	}
 	return _map
+}
+
+func makeFrame(reader *bufio.Reader, header ID3v2FrameHeader) ID3v2Frame {
+	frame := ID3v2Frame{ }
+	frame.Header = header
+	frame.Body = readBytes(reader, header.Size)
+	return frame
 }
