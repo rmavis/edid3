@@ -34,9 +34,9 @@ type ID3v2FrameHeader struct {
 }
 
 type Item struct {
-	Path        string
-	Tag         ID3v2Tag
-	FillHeader  func(*ID3v2TagHeader, []byte)
-	ReadFrames  func() []ID3v2Frame
-	PrintFrames func([]ID3v2Frame)
+	Path           string
+	Tag            ID3v2Tag
+	FillTagHeader  func(*ID3v2TagHeader, []byte)
+	ReadFrames     func() []ID3v2Frame
+	PrintFrames    func([]ID3v2Frame)
 }

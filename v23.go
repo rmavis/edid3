@@ -13,10 +13,10 @@ const V23TAGSIZESIZE int = 4
 const V23TAGFLAGSSIZE int = 2
 
 
-func v23GetManager(path string, reader *bufio.Reader) *Item {
+func v23MakeItem(path string, reader *bufio.Reader) *Item {
 	item := Item{ }
 	item.Path = path
-	item.FillHeader = v23FillHeader
+	item.FillTagHeader = v23FillTagHeader
 	item.ReadFrames = func () []ID3v2Frame {
 		return v23ReadFrames(reader)
 	}
@@ -24,25 +24,28 @@ func v23GetManager(path string, reader *bufio.Reader) *Item {
 	return &item
 }
 
-func v23FillHeader(header *ID3v2TagHeader, data []byte) {
-	header.Unsynchronization = boolFromByte(data[5], 7)
-	header.Extended = boolFromByte(data[5], 6)
-	header.Experimental = boolFromByte(data[5], 5)
+func v23FillTagHeader(header *ID3v2TagHeader, data []byte) {
+	header.Unsynchronization = isBitOn(data[5], 7)
+	header.Extended = isBitOn(data[5], 6)
+	header.Experimental = isBitOn(data[5], 5)
 }
 
 func v23ReadFrames(reader *bufio.Reader) []ID3v2Frame {
 	var frames []ID3v2Frame
 	for areBytesOk(reader, V23TAGIDSIZE, areBytesValidFrameId) {
-		header := ID3v2FrameHeader{ }
-		header.Id = string(readBytes(reader, V23TAGIDSIZE))
-		header.Size = bytesToInt(readBytes(reader, V23TAGSIZESIZE))
-		// Need to parse and appropriately handle these flags  @TODO
-		header.Flags = readBytes(reader, V23TAGFLAGSSIZE)
-
-		frames = append(frames, makeFrame(reader, header))
+		header := v23ReadFrameHeader(reader)
+		frames = append(frames, makeTagFrame(reader, header))
 	}
-
 	return frames
+}
+
+func v23ReadFrameHeader(reader *bufio.Reader) ID3v2FrameHeader {
+	header := ID3v2FrameHeader{ }
+	header.Id = string(readBytes(reader, V23TAGIDSIZE))
+	header.Size = bytesToInt(readBytes(reader, V23TAGSIZESIZE))
+	// Need to parse and appropriately handle these flags  @TODO
+	header.Flags = readBytes(reader, V23TAGFLAGSSIZE)
+	return header
 }
 
 func v23PrintFrames(frames []ID3v2Frame) {

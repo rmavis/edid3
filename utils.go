@@ -10,28 +10,49 @@ import (
 )
 
 
-func printHeader(head ID3v2TagHeader) {
-	fmt.Println("Header Information:")
-	fmt.Printf("Version: %v\n", head.Version)
-	fmt.Printf("MinorVersion: %v\n", head.MinorVersion)
-	fmt.Printf("Unsynchronization: %v\n", head.Unsynchronization)
-	fmt.Printf("Extended: %v\n", head.Extended)
-	fmt.Printf("Experimental: %v\n", head.Experimental)
-	fmt.Printf("Footer: %v\n", head.Footer)
-	fmt.Printf("Size: %v\n", head.Size)
-	fmt.Println()
+const V2TAGHEADERSIZE = 10
+
+
+func fileHasV2Tag(reader *bufio.Reader) bool {
+	// This check is very limited. It isn't strictly necessary for
+	// the ID3 tag to occur at the beginning of the file.  @TODO
+	checkTag := func (bytes []byte) bool {
+		return (bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3')
+	}
+	return areBytesOk(reader, 3, checkTag)
 }
 
-// This isn't being used?  @TODO
-func printFrame(frame ID3v2Frame) {
-	fmt.Println("Frame Information:")
-	fmt.Printf("ID: %v\n", frame.Header.Id)
-	fmt.Printf("Size: %v\n", frame.Header.Size)
-	fmt.Printf("Flags: %v\n", frame.Header.Flags)
-	fmt.Printf("Body: %v\n", frame.Body)
-	fmt.Println()
+// readV2TagHeader receives a Reader and returns a struct containing
+// the tag's header information.
+// The tag's header will contain ten bytes:
+// 0-2: the characters "ID3"
+// 3-4: the version number
+//      - first byte is the version's major number
+//        So `04` here indicates v2.4
+//      - second byte is the minor version
+//        So `00` here indicates v2.4.0
+// 5: bitwise flags. See the `v2#FillTagHeader` functions.
+//    Followed by four blank bits
+// 6-9: size of the entire tag encoded in synchsafe integer
+func readV2TagHeader(reader *bufio.Reader) (ID3v2TagHeader, []byte) {
+	data := readBytes(reader, V2TAGHEADERSIZE)
+
+	header := ID3v2TagHeader{ }
+	header.Version = int(data[3])
+	header.MinorVersion = int(data[4])
+	header.Size = synchsafeBytesToInt(data[6:])
+
+	return header, data
 }
 
+func fillItemTag(item *Item, header ID3v2TagHeader, data []byte) {
+	item.FillTagHeader(&header, data)
+	item.Tag.Header = header
+	item.Tag.Frames = item.ReadFrames()
+}
+
+// Frame IDs consist of three or four bytes, each in the range
+// A-Z or 0-9.
 func areBytesValidFrameId(bytes []byte) bool {
 	for _, byte := range bytes {
 		if ((byte < 'A' || byte > 'Z') && (byte < '0' || byte > '9')) {
@@ -79,7 +100,7 @@ func synchsafeIntToBytes(size int) []byte {
 	for len(bytes) < 4 {
 		bytes = append(bytes, uint8(0))
 	}
-	reverse(bytes)
+	reverseByteSlice(bytes)
 	//fmt.Printf("CONVERTED %v to %v\n", size, bytes)
 	return bytes
 }
@@ -93,8 +114,8 @@ func bytesToInt(bytes []byte) int {
 	return m
 }
 
-// reverse reverses a slice of bytes in place.
-func reverse(bytes []byte) {
+// reverseByteSlice reverses a slice of bytes in place.
+func reverseByteSlice(bytes []byte) {
 	for i, j := 0, len(bytes)-1; i < j; i, j = i+1, j-1 {
 		bytes[i], bytes[j] = bytes[j], bytes[i]
 	}
@@ -206,10 +227,10 @@ func toUTF16(data []byte) []uint16 {
 	return s
 }
 
-// boolFromByte is a convenience function. It receives a byte and a
+// isBitOn is a convenience function. It receives a byte and a
 // number indicating a bit position in that byte. It returns a bool
 // indicating the value of that bit (0 = false, 1 = true).
-func boolFromByte(byte byte, pos int) bool {
+func isBitOn(byte byte, pos int) bool {
 	if pos > 7 {
 		return false
 	}
@@ -234,9 +255,37 @@ func makeMap(parts [][2]string, pull func([2]string) (string, string)) map[strin
 	return _map
 }
 
-func makeFrame(reader *bufio.Reader, header ID3v2FrameHeader) ID3v2Frame {
+func makeTagFrame(reader *bufio.Reader, header ID3v2FrameHeader) ID3v2Frame {
 	frame := ID3v2Frame{ }
 	frame.Header = header
 	frame.Body = readBytes(reader, header.Size)
 	return frame
+}
+
+func printItemData(item *Item) {
+	fmt.Printf("[%v:%v]\n", item.Tag.Header.Version, item.Path)
+	item.PrintFrames(item.Tag.Frames)
+}
+
+// This isn't being used?  @TODO
+func printTagHeader(head ID3v2TagHeader) {
+	fmt.Println("Header Information:")
+	fmt.Printf("Version: %v\n", head.Version)
+	fmt.Printf("MinorVersion: %v\n", head.MinorVersion)
+	fmt.Printf("Unsynchronization: %v\n", head.Unsynchronization)
+	fmt.Printf("Extended: %v\n", head.Extended)
+	fmt.Printf("Experimental: %v\n", head.Experimental)
+	fmt.Printf("Footer: %v\n", head.Footer)
+	fmt.Printf("Size: %v\n", head.Size)
+	fmt.Println()
+}
+
+// This isn't being used?  @TODO
+func printTagFrame(frame ID3v2Frame) {
+	fmt.Println("Frame Information:")
+	fmt.Printf("ID: %v\n", frame.Header.Id)
+	fmt.Printf("Size: %v\n", frame.Header.Size)
+	fmt.Printf("Flags: %v\n", frame.Header.Flags)
+	fmt.Printf("Body: %v\n", frame.Body)
+	fmt.Println()
 }

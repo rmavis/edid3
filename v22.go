@@ -12,10 +12,10 @@ const V22TAGIDSIZE int = 3
 const V22TAGSIZESIZE int = 3
 
 
-func v22GetManager(path string, reader *bufio.Reader) *Item {
+func v22MakeItem(path string, reader *bufio.Reader) *Item {
 	item := Item{ }
 	item.Path = path
-	item.FillHeader = v22FillHeader
+	item.FillTagHeader = v22FillTagHeader
 	item.ReadFrames = func () []ID3v2Frame {
 		return v22ReadFrames(reader)
 	}
@@ -23,22 +23,25 @@ func v22GetManager(path string, reader *bufio.Reader) *Item {
 	return &item
 }
 
-func v22FillHeader(header *ID3v2TagHeader, data []byte) {
-	header.Unsynchronization = boolFromByte(data[5], 7)
-	header.Compression = boolFromByte(data[5], 6)
+func v22FillTagHeader(header *ID3v2TagHeader, data []byte) {
+	header.Unsynchronization = isBitOn(data[5], 7)
+	header.Compression = isBitOn(data[5], 6)
 }
 
 func v22ReadFrames(reader *bufio.Reader) []ID3v2Frame {
 	var frames []ID3v2Frame
 	for areBytesOk(reader, V22TAGIDSIZE, areBytesValidFrameId) {
-		header := ID3v2FrameHeader{ }
-		header.Id = string(readBytes(reader, V22TAGIDSIZE))
-		header.Size = bytesToInt(readBytes(reader, V22TAGSIZESIZE))
-
-		frames = append(frames, makeFrame(reader, header))
+		header := v22ReadFrameHeader(reader)
+		frames = append(frames, makeTagFrame(reader, header))
 	}
-
 	return frames
+}
+
+func v22ReadFrameHeader(reader *bufio.Reader) ID3v2FrameHeader {
+	header := ID3v2FrameHeader{ }
+	header.Id = string(readBytes(reader, V22TAGIDSIZE))
+	header.Size = bytesToInt(readBytes(reader, V22TAGSIZESIZE))
+	return header
 }
 
 func v22PrintFrames(frames []ID3v2Frame) {

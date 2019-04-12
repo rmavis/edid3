@@ -14,10 +14,10 @@ const V24TAGSIZESIZE int = 4
 const V24TAGFLAGSSIZE int = 2
 
 
-func v24GetManager(path string, reader *bufio.Reader) *Item {
+func v24MakeItem(path string, reader *bufio.Reader) *Item {
 	item := Item{ }
 	item.Path = path
-	item.FillHeader = v24FillHeader
+	item.FillTagHeader = v24FillTagHeader
 	item.ReadFrames = func () []ID3v2Frame {
 		return v24ReadFrames(reader)
 	}
@@ -25,26 +25,29 @@ func v24GetManager(path string, reader *bufio.Reader) *Item {
 	return &item
 }
 
-func v24FillHeader(header *ID3v2TagHeader, data []byte) {
-	header.Unsynchronization = boolFromByte(data[5], 7)
-	header.Extended = boolFromByte(data[5], 6)
-	header.Experimental = boolFromByte(data[5], 5)
-	header.Footer = boolFromByte(data[5], 4)
+func v24FillTagHeader(header *ID3v2TagHeader, data []byte) {
+	header.Unsynchronization = isBitOn(data[5], 7)
+	header.Extended = isBitOn(data[5], 6)
+	header.Experimental = isBitOn(data[5], 5)
+	header.Footer = isBitOn(data[5], 4)
 }
 
 func v24ReadFrames(reader *bufio.Reader) []ID3v2Frame {
 	var frames []ID3v2Frame
 	for areBytesOk(reader, V24TAGIDSIZE, areBytesValidFrameId) {
-		header := ID3v2FrameHeader{ }
-		header.Id = string(readBytes(reader, V24TAGIDSIZE))
-		header.Size = synchsafeBytesToInt(readBytes(reader, V24TAGSIZESIZE))
-		// Need to parse and appropriately handle these flags  @TODO
-		header.Flags = readBytes(reader, V24TAGFLAGSSIZE)
-
-		frames = append(frames, makeFrame(reader, header))
+		header := v24ReadFrameHeader(reader)
+		frames = append(frames, makeTagFrame(reader, header))
 	}
-
 	return frames
+}
+
+func v24ReadFrameHeader(reader *bufio.Reader) ID3v2FrameHeader {
+	header := ID3v2FrameHeader{ }
+	header.Id = string(readBytes(reader, V24TAGIDSIZE))
+	header.Size = synchsafeBytesToInt(readBytes(reader, V24TAGSIZESIZE))
+	// Need to parse and appropriately handle these flags  @TODO
+	header.Flags = readBytes(reader, V24TAGFLAGSSIZE)
+	return header
 }
 
 func v24PrintFrames(frames []ID3v2Frame) {
