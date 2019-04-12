@@ -42,11 +42,7 @@ func v22ReadFrames(reader *bufio.Reader) []ID3v2Frame {
 	for areBytesOk(reader, V22TAGIDSIZE, checkId) {
 		header := ID3v2FrameHeader{ }
 		header.Id = string(readBytes(reader, V22TAGIDSIZE))
-
-		// Improve this @TODO
-		b := readBytes(reader, V22TAGSIZESIZE)
-		// via https://stackoverflow.com/questions/45000982/convert-3-bytes-to-int-in-go
-		header.Size = (int(uint(b[2]) | uint(b[1])<<8 | uint(b[0])<<16))
+		header.Size = bytesToInt(readBytes(reader, V22TAGSIZESIZE))
 
 		frame := ID3v2Frame{ }
 		frame.Header = header

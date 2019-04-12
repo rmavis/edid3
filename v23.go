@@ -44,7 +44,7 @@ func v23ReadFrames(reader *bufio.Reader) []ID3v2Frame {
 	for areBytesOk(reader, V23TAGIDSIZE, checkId) {
 		header := ID3v2FrameHeader{ }
 		header.Id = string(readBytes(reader, V23TAGIDSIZE))
-		header.Size = synchsafeBytesToInt(readBytes(reader, V23TAGSIZESIZE))
+		header.Size = bytesToInt(readBytes(reader, V23TAGSIZESIZE))
 		// Need to parse and appropriately handle these flags  @TODO
 		header.Flags = readBytes(reader, V23TAGFLAGSSIZE)
 

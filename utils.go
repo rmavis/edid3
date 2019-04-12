@@ -75,6 +75,15 @@ func synchsafeIntToBytes(size int) []byte {
 	return bytes
 }
 
+func bytesToInt(bytes []byte) int {
+	m := 0
+	for i, b := range bytes {
+		shift := uint(len(bytes) - i - 1) * 8  // 16, 8, 0
+		m |= int(uint(b) << shift)
+	}
+	return m
+}
+
 // reverse reverses a slice of bytes in place.
 func reverse(bytes []byte) {
 	for i, j := 0, len(bytes)-1; i < j; i, j = i+1, j-1 {
