@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 	"unicode/utf16"
 )
@@ -81,6 +82,15 @@ func reverse(bytes []byte) {
 	}
 }
 
+func isFileEmpty(file *os.File) bool {
+    stats, err := file.Stat()
+    if err != nil {
+		fmt.Fprintf(os.Stderr, "Can't stat file '%v': %s\n", file, err)
+    }
+    size := stats.Size()
+	return size == 0
+}
+
 // areBytesOk is a test runner. It receives a Reader, a number of
 // bytes to read, and a test function to pass those bytes to. The
 // test function must receive a slice of bytes and return a bool.
@@ -129,7 +139,7 @@ func parseString(data []byte) string {
 		s = string(utf16.Decode(toUTF16(data[1:])))
 		break
 	case 2: // UTF-16BE without BOM.
-		panic("Unsupported text encoding UTF-16BE.")
+		panic("Unsupported text encoding UTF-16BE.")  // @TODO
 	case 3: // UTF-8 text.
 		s = string(data[1:])
 		break

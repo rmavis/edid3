@@ -12,6 +12,7 @@ type ID3v2Tag struct {
 type ID3v2TagHeader struct {
 	Version           int
 	MinorVersion      int
+	Compression       bool  // In v2.2
 	Unsynchronization bool
 	Extended          bool
 	Experimental      bool
@@ -35,6 +36,7 @@ type ID3v2FrameHeader struct {
 type Item struct {
 	Path        string
 	Tag         ID3v2Tag
+	FillHeader  func(*ID3v2TagHeader, []byte)
 	ReadFrames  func() []ID3v2Frame
 	PrintFrames func([]ID3v2Frame)
 }

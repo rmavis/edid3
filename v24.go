@@ -5,15 +5,31 @@ import (
 	"fmt"
 )
 
+// http://id3.org/id3v2.4.0-structure
+// http://id3.org/id3v2.4.0-frames
+
+
+const V24TAGIDSIZE int = 4
+const V24TAGSIZESIZE int = 4
+const V24TAGFLAGSSIZE int = 2
+
 
 func v24GetManager(path string, reader *bufio.Reader) *Item {
 	item := Item{ }
 	item.Path = path
+	item.FillHeader = v24FillHeader
 	item.ReadFrames = func () []ID3v2Frame {
 		return v24ReadFrames(reader)
 	}
 	item.PrintFrames = v24PrintFrames
 	return &item
+}
+
+func v24FillHeader(header *ID3v2TagHeader, data []byte) {
+	header.Unsynchronization = boolFromByte(data[5], 7)
+	header.Extended = boolFromByte(data[5], 6)
+	header.Experimental = boolFromByte(data[5], 5)
+	header.Footer = boolFromByte(data[5], 4)
 }
 
 func v24ReadFrames(reader *bufio.Reader) []ID3v2Frame {
@@ -27,12 +43,12 @@ func v24ReadFrames(reader *bufio.Reader) []ID3v2Frame {
 	}
 
 	var frames []ID3v2Frame
-	for areBytesOk(reader, 4, checkId) {
+	for areBytesOk(reader, V24TAGIDSIZE, checkId) {
 		header := ID3v2FrameHeader{ }
-		header.Id = string(readBytes(reader, 4))
-		header.Size = synchsafeBytesToInt(readBytes(reader, 4))
+		header.Id = string(readBytes(reader, V24TAGIDSIZE))
+		header.Size = synchsafeBytesToInt(readBytes(reader, V24TAGSIZESIZE))
 		// Need to parse and appropriately handle these flags  @TODO
-		header.Flags = readBytes(reader, 2)
+		header.Flags = readBytes(reader, V24TAGFLAGSSIZE)
 
 		frame := ID3v2Frame{ }
 		frame.Header = header
@@ -52,7 +68,8 @@ func v24PrintFrames(frames []ID3v2Frame) {
 	keys := v24MakeFrameMap(pull)
 
 	for _, frame := range frames {
-		if frame.Header.Id[0:1] == "T" {
+		if ((frame.Header.Id[0:1] == "T") ||
+			(frame.Header.Id[0:1] == "W")) {
 			fmt.Printf("%v: %v\n", keys[frame.Header.Id], parseString(frame.Body))
 		} else {
 			fmt.Printf("Frame is not text frame (%v)\n", frame.Header.Id)
@@ -63,31 +80,34 @@ func v24PrintFrames(frames []ID3v2Frame) {
 // Full reference: http://id3.org/id3v2.4.0-frames
 func v24MakeFrameMap(pull func([2]string) (string, string)) map[string]string {
 	parts := [...][2]string{
-		[2]string{"AENC", "Audio encryption"},
-		[2]string{"APIC", "Attached picture"},
-		[2]string{"ASPI", "Audio seek point index"},
-		[2]string{"COMM", "Comments"},
-		[2]string{"COMR", "Commercial frame"},
-		[2]string{"ENCR", "Encryption method registration"},
-		[2]string{"EQU2", "Equalisation (2)"},
-		[2]string{"ETCO", "Event timing codes"},
-		[2]string{"GEOB", "General encapsulated object"},
-		[2]string{"GRID", "Group identification registration"},
-		[2]string{"LINK", "Linked information"},
-		[2]string{"MCDI", "Music CD identifier"},
-		[2]string{"MLLT", "MPEG location lookup table"},
-		[2]string{"OWNE", "Ownership frame"},
-		[2]string{"PRIV", "Private frame"},
-		[2]string{"PCNT", "Play counter"},
-		[2]string{"POPM", "Popularimeter"},
-		[2]string{"POSS", "Position synchronisation frame"},
-		[2]string{"RBUF", "Recommended buffer size"},
-		[2]string{"RVA2", "Relative volume adjustment (2)"},
-		[2]string{"RVRB", "Reverb"},
-		[2]string{"SEEK", "Seek frame"},
-		[2]string{"SIGN", "Signature frame"},
-		[2]string{"SYLT", "Synchronised lyric/text"},
-		[2]string{"SYTC", "Synchronised tempo codes"},
+		[2]string{"AENC", "Audio encryption"},  // special
+		[2]string{"APIC", "Attached picture"},  // special
+		[2]string{"ASPI", "Audio seek point index"},  // special
+		[2]string{"COMM", "Comments"},  // special
+		[2]string{"COMR", "Commercial frame"},  // special
+		[2]string{"ENCR", "Encryption method registration"},  // special
+		[2]string{"EQU2", "Equalisation (2)"},  // special
+		[2]string{"ETCO", "Event timing codes"},  // special
+		[2]string{"GEOB", "General encapsulated object"},  // special
+		[2]string{"GRID", "Group identification registration"},  // special
+		[2]string{"LINK", "Linked information"},  // special
+		[2]string{"MCDI", "Music CD identifier"},  // special
+		[2]string{"MLLT", "MPEG location lookup table"},  // special
+		[2]string{"OWNE", "Ownership frame"},  // special
+		[2]string{"PRIV", "Private frame"},  // special
+		[2]string{"PCNT", "Play counter"},  // special
+		[2]string{"POPM", "Popularimeter"},  // special
+		[2]string{"POSS", "Position synchronisation frame"},  // special
+		[2]string{"RBUF", "Recommended buffer size"},  // special
+		[2]string{"RVA2", "Relative volume adjustment (2)"},  // special
+		[2]string{"RVRB", "Reverb"},  // special
+		[2]string{"SEEK", "Seek frame"},  // special
+		[2]string{"SIGN", "Signature frame"},  // special
+		[2]string{"SYLT", "Synchronised lyric/text"},  // special
+		[2]string{"SYTC", "Synchronised tempo codes"},   // special
+
+		// Text frames. Most of these should be plain text fields.
+		// There are only a couple exceptions.
 		[2]string{"TALB", "Album/Movie/Show title"},
 		[2]string{"TBPM", "BPM (beats per minute)"},
 		[2]string{"TCOM", "Composer"},
@@ -102,14 +122,14 @@ func v24MakeFrameMap(pull func([2]string) (string, string)) map[string]string {
 		[2]string{"TENC", "Encoded by"},
 		[2]string{"TEXT", "Lyricist/Text writer"},
 		[2]string{"TFLT", "File type"},
-		[2]string{"TIPL", "Involved people list"},
+		[2]string{"TIPL", "Involved people list"},  // special
 		[2]string{"TIT1", "Content group description"},
 		[2]string{"TIT2", "Title/songname/content description"},
 		[2]string{"TIT3", "Subtitle/Description refinement"},
 		[2]string{"TKEY", "Initial key"},
 		[2]string{"TLAN", "Language(s)"},
 		[2]string{"TLEN", "Length"},
-		[2]string{"TMCL", "Musician credits list"},
+		[2]string{"TMCL", "Musician credits list"},  // special
 		[2]string{"TMED", "Media type"},
 		[2]string{"TMOO", "Mood"},
 		[2]string{"TOAL", "Original album/movie/show title"},
@@ -133,10 +153,13 @@ func v24MakeFrameMap(pull func([2]string) (string, string)) map[string]string {
 		[2]string{"TSRC", "ISRC (international standard recording code)"},
 		[2]string{"TSSE", "Software/Hardware and settings used for encoding"},
 		[2]string{"TSST", "Set subtitle"},
-		[2]string{"TXXX", "User defined text information frame"},
-		[2]string{"UFID", "Unique file identifier"},
-		[2]string{"USER", "Terms of use"},
-		[2]string{"USLT", "Unsynchronised lyric/text transcription"},
+		[2]string{"TXXX", "User defined text information frame"},  // special
+
+		[2]string{"UFID", "Unique file identifier"},  // special
+		[2]string{"USER", "Terms of use"},  // special
+		[2]string{"USLT", "Unsynchronised lyric/text transcription"},  // special
+
+		// These frames should contain URLs.
 		[2]string{"WCOM", "Commercial information"},
 		[2]string{"WCOP", "Copyright/Legal information"},
 		[2]string{"WOAF", "Official audio file webpage"},
@@ -145,7 +168,7 @@ func v24MakeFrameMap(pull func([2]string) (string, string)) map[string]string {
 		[2]string{"WORS", "Official Internet radio station homepage"},
 		[2]string{"WPAY", "Payment"},
 		[2]string{"WPUB", "Publishers official webpage"},
-		[2]string{"WXXX", "User defined URL link frame"},
+		[2]string{"WXXX", "User defined URL link frame"},  // special
 	}
 
 	return makeMap(parts[:], pull)
