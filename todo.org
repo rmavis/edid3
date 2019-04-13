@@ -1,4 +1,35 @@
-* TODO
+* Editing
+Data should look like program's output:
+[/abs/path/to/file]
+frame name: frame data
+frame name: frame data
+...
+[/abs/path/to/other/file]
+frame name: frame data
+frame name: frame data
+...
+
+Empty lines and comment lines are ignored.
+
+To edit a file from input data:
+- check file path
+  check version number?
+- parse file's frame data
+  frame name: frame data
+  (will convert frame name to frame ID)
+- get file's current tag
+- compare current frame data with revisions
+  - new frames will be added
+  - existing frames will be edited
+  - should have a method for removing frames
+- if edits to make:
+  - convert frames to writable format according to frame format
+    (id, size, data, etc)
+  - get new size of frames data
+  - if <= current size, write in place, else write to temp file and rename over
+
+
+* Possible Bugs
 - It isn't necessary for the ID3 tag to occur at the beginning of the file -- they can also occur at the end, or presumably anywhere else.
 - What about pulling/scanning for a tag from the end of the file? A tag with a footer must appear at the end of a file.
 - In `readBytes`

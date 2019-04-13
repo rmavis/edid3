@@ -126,13 +126,16 @@ func reverseByteSlice(bytes []byte) {
 	}
 }
 
-func isFileEmpty(file *os.File) bool {
+func fileSize(file *os.File) int {
     stats, err := file.Stat()
     if err != nil {
 		fmt.Fprintf(os.Stderr, "Can't stat file '%v': %s\n", file, err)
     }
-    size := stats.Size()
-	return size == 0
+    return stats.Size()
+}
+
+func isFileEmpty(file *os.File) bool {
+	return fileSize(file) == 0
 }
 
 // areBytesOk is a test runner. It receives a Reader, a number of
