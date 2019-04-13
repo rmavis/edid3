@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,15 +13,6 @@ import (
 
 const V2TAGHEADERSIZE = 10
 
-
-func fileHasV2Tag(reader *bufio.Reader) bool {
-	// This check is very limited. It isn't strictly necessary for
-	// the ID3 tag to occur at the beginning of the file.  @TODO
-	checkTag := func (bytes []byte) bool {
-		return (bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3')
-	}
-	return areBytesOk(reader, 3, checkTag)
-}
 
 // readV2TagHeader receives a Reader and returns a struct containing
 // the tag's header information.
@@ -34,15 +26,28 @@ func fileHasV2Tag(reader *bufio.Reader) bool {
 // 5: bitwise flags. See the `v2#FillTagHeader` functions.
 //    Followed by four blank bits
 // 6-9: size of the entire tag encoded in synchsafe integer
-func readV2TagHeader(reader *bufio.Reader) (ID3v2TagHeader, []byte) {
-	data := readBytes(reader, V2TAGHEADERSIZE)
-
+func readV2TagHeader(reader *bufio.Reader) (ID3v2TagHeader, []byte, error) {
 	header := ID3v2TagHeader{ }
-	header.Version = int(data[3])
-	header.MinorVersion = int(data[4])
-	header.Size = synchsafeBytesToInt(data[6:])
+	var data []byte
 
-	return header, data
+	if fileHasV2Tag(reader) {
+		data = readBytes(reader, V2TAGHEADERSIZE)
+		header.Version = int(data[3])
+		header.MinorVersion = int(data[4])
+		header.Size = synchsafeBytesToInt(data[6:])
+		return header, data, nil
+	}
+
+	return header, data, errors.New("File contains no ID3v2 tag.")
+}
+
+func fileHasV2Tag(reader *bufio.Reader) bool {
+	// This check is very limited. It isn't strictly necessary for
+	// the ID3 tag to occur at the beginning of the file.  @TODO
+	checkTag := func (bytes []byte) bool {
+		return (bytes[0] == 'I' && bytes[1] == 'D' && bytes[2] == '3')
+	}
+	return areBytesOk(reader, 3, checkTag)
 }
 
 func fillItemTag(item *Item, header ID3v2TagHeader, data []byte) {

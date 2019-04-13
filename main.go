@@ -2,7 +2,7 @@ package main
 
 import (
 	"bufio"
-	//"errors"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -11,16 +11,17 @@ import (
 
 
 func main() {
-	has_args := len(os.Args) > 0
+	// The first argument is the program name.
+	has_args := len(os.Args) > 1
 	has_data := !isFileEmpty(os.Stdin)
 
 	if (!(has_args || has_data)) {
-		printUsage()
+		printUsage(os.Args[0])
 		return
 	}
 
 	if has_args {
-		actOnArgs(os.Args)
+		actOnArgs(os.Args[1:])
 	}
 
 	if has_data {
@@ -29,51 +30,68 @@ func main() {
 }
 
 func actOnArgs(args []string) {
-	for _, arg := range os.Args[1:] {
-		path, err := filepath.Abs(arg)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Path '%s' appears to be invalid: %s\n", path, err)
-			return
-		}
-
-		handle, err := os.Open(path)
-		defer handle.Close()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Could not open file '%s': %s\n", path, err)
-			return
-		}
-
-		file_reader := bufio.NewReader(handle)
-		if fileHasV2Tag(file_reader) == false {
-			fmt.Fprintf(os.Stderr, "Unable to read ID3 tag: not present in file '%s'.\n", path)
-			return
-		}
-
-		tag_header, tag_data := readV2TagHeader(file_reader)
-
-		// Update the reader so it will return EOF at the end of the tag.
-		file_reader = bufio.NewReader(io.LimitReader(file_reader, int64(tag_header.Size)))
-
-		var item *Item
-		if tag_header.Version == 4 {
-			item = v24MakeItem(path, file_reader)
-		} else if tag_header.Version == 3 {
-			item = v23MakeItem(path, file_reader)
-		} else if tag_header.Version == 2 {
-			item = v22MakeItem(path, file_reader)
+	x := len(args) - 1
+	for _, arg := range args {
+		if (arg[0] == '-') {
+			fmt.Printf("FLAG ARGUMENT '%v'\n", arg)
 		} else {
-			panic(fmt.Sprintf("Unrecognized ID3v2 version: %d", tag_header.Version))
-		}
-		fillItemTag(item, tag_header, tag_data)
+			item, err := itemFromFile(arg)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v", err)
+				continue
+			}
 
-		printItemData(item)
+			printItemData(item)
+			if x > 0 {
+				fmt.Println()
+			}
+		}
+		x--
 	}
+}
+
+func itemFromFile(file_name string) (*Item, error) {
+	var item *Item
+
+	path, err := filepath.Abs(file_name)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("File '%s' appears not to exist (%v).", path, err))
+	}
+
+	handle, err := os.Open(path)
+	defer handle.Close()
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Can't open file '%s' (%s).", path, err))
+	}
+
+	file_reader := bufio.NewReader(handle)
+
+	tag_header, header_data, err := readV2TagHeader(file_reader)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("ID3 tag not present in file '%s'.\n", path))
+	}
+
+	// Update the reader so it will return EOF at the end of the tag.
+	file_reader = bufio.NewReader(io.LimitReader(file_reader, int64(tag_header.Size)))
+
+	if tag_header.Version == 2 {
+		item = v22MakeItem(path, file_reader)
+	} else if tag_header.Version == 3 {
+		item = v23MakeItem(path, file_reader)
+	} else if tag_header.Version == 4 {
+		item = v24MakeItem(path, file_reader)
+	} else {
+		return nil, errors.New(fmt.Sprintf("Unrecognized tag version (%d).", tag_header.Version))
+	}
+	fillItemTag(item, tag_header, header_data)
+
+	return item, nil
 }
 
 func actOnStdin() {
 	fmt.Println("Would act on stdin")
 }
 
-func printUsage() {
-	fmt.Printf("Usage: %s [path(s) to mp3 file]\n", os.Args[0])
+func printUsage(program_name string) {
+	fmt.Printf("Usage: %s [path(s) to mp3 file]\n", program_name)
 }
