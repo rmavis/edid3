@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 
@@ -92,22 +93,44 @@ func itemFromFile(file_name string) (*Item, error) {
 func actOnStdin() {
 
 	reader := bufio.NewReader(os.Stdin)
-	var line string
-	var char Rune
+	var line strings.Builder
+	var bytes []byte
 	current, max := 0, fileSize(os.Stdin)
 	for current < max {
-		char = reader.ReadRune()
-		if char == "\n" {
+		byte, err := reader.Peek(1)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to peek next byte: %s", err)
+			return
+		}
 
-		} else if char == '[' {
-			line, err = reader.ReadString(']')
+		char := string(byte)
+		if char == '[' {
+			_, err := reader.Discard(1)
 			if err != nil {
 				// This should be more graceful  @TODO
-				panic(fmt.Sprintf(os.Stderr, "Error reading for ']': %s\n", err))
+				panic(fmt.Sprintf(os.Stderr, "Error discarding byte peeked at (byte): %s\n", err))
 			}
-			path := strings.TrimSuffix(line, ']')
-			// Make token: type: 'path', value: path
+
+			for {
+				_byte, err := reader.ReadByte()
+				if err != nil {
+					// This should be more graceful  @TODO
+					panic(fmt.Sprintf(os.Stderr, "Error reading character (path): %s\n", err))
+				}
+
+				_char := string(_byte)
+				if char == "\n" {
+					panic(fmt.Sprintf(os.Stderr, "Malformed file path: encountered end-of-line before closing square bracket. Should be like \"[/path/to/file]\".\n", err))
+				} else if _char == ']' {
+					return line.String()
+				} else {
+					fmt.Fprintf(&str, _char)
+				}
+			}
+		} else if char == "\n" {
 		}
+
+
 
 		current++  // CAREFUL
 	}
@@ -144,6 +167,24 @@ func actOnStdin() {
 
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error reading input:", err)
+	}
+}
+
+func readWhile(reader *bufio.Reader, wantChar func(char string) bool) (string, error) {
+	var str strings.Builder
+	for {
+		byte, err := reader.Peek(1)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("Unable to peek next byte: %s", err))
+		}
+
+		char := string(byte)
+		if wantChar(char) {
+			fmt.Fprintf(&str, char)
+		} else {
+
+		}
+
 	}
 }
 
