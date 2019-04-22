@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 )
 
 
@@ -43,7 +44,7 @@ type Item struct {
 
 type TokenType int
 const (
-	TokenPunctuation TokenType = iota
+	TokenUnknown TokenType = iota
 	TokenFilePath
 	TokenFieldKey
 	TokenFieldValue
@@ -52,4 +53,8 @@ const (
 type Token struct {
 	Type  TokenType
 	Value string
+}
+
+type Lexer struct {
+	Reader *bufio.Reader
 }

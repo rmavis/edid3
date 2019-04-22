@@ -89,13 +89,14 @@ func itemFromFile(file_name string) (*Item, error) {
 }
 
 func actOnStdin() {
-	reader := bufio.NewReader(os.Stdin)
-	tokens, err := readInputTokens(reader)
-	if ((err != nil) && (err != io.EOF)) {
-		fmt.Fprintf(os.Stderr, "ERROR READING TOKENS: %v", err)
-		return
+	lexer := newLexer(bufio.NewReader(os.Stdin))
+	for lexer.More() {
+		token, err := lexer.Next()
+		if err != nil {
+			panic(fmt.Sprintf("Error getting lexer's next token: %s", err))
+		}
+		fmt.Printf("Got token: %v\n", token)
 	}
-	fmt.Printf("TOKENS: %v", tokens)
 }
 
 func printUsage(program_name string) {
