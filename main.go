@@ -7,8 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 )
 
 
@@ -91,101 +89,13 @@ func itemFromFile(file_name string) (*Item, error) {
 }
 
 func actOnStdin() {
-
 	reader := bufio.NewReader(os.Stdin)
-	var line strings.Builder
-	var bytes []byte
-	current, max := 0, fileSize(os.Stdin)
-	for current < max {
-		byte, err := reader.Peek(1)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Unable to peek next byte: %s", err)
-			return
-		}
-
-		char := string(byte)
-		if char == '[' {
-			_, err := reader.Discard(1)
-			if err != nil {
-				// This should be more graceful  @TODO
-				panic(fmt.Sprintf(os.Stderr, "Error discarding byte peeked at (byte): %s\n", err))
-			}
-
-			for {
-				_byte, err := reader.ReadByte()
-				if err != nil {
-					// This should be more graceful  @TODO
-					panic(fmt.Sprintf(os.Stderr, "Error reading character (path): %s\n", err))
-				}
-
-				_char := string(_byte)
-				if char == "\n" {
-					panic(fmt.Sprintf(os.Stderr, "Malformed file path: encountered end-of-line before closing square bracket. Should be like \"[/path/to/file]\".\n", err))
-				} else if _char == ']' {
-					return line.String()
-				} else {
-					fmt.Fprintf(&str, _char)
-				}
-			}
-		} else if char == "\n" {
-		}
-
-
-
-		current++  // CAREFUL
+	tokens, err := readInputTokens(reader)
+	if ((err != nil) && (err != io.EOF)) {
+		fmt.Fprintf(os.Stderr, "ERROR READING TOKENS: %v", err)
+		return
 	}
-
-
-	// The `[^/]*` allows for information to be present before the path.
-	// The path must be an absolute path.
-	file_regex := regexp.MustCompile(`\[[^/]*([^\]]+)\]`)
-	frame_regex := regexp.MustCompile(`^([^:]+)[ ]*:[ ]*(.+)$`)
-	for reader.Scan() {
-		line := scanner.Text()
-		//fmt.Printf("GOT LINE '%v'\n", line)
-
-		if ((len(line) == 0) ||
-			(line[0] == '#')) {
-			continue
-		}
-
-		var match []string
-		if file_regex.MatchString(line) {
-			match = file_regex.FindStringSubmatch(line)
-			path := match[1]
-			fmt.Printf("GOT FILE PATH '%v'\n", path)
-		} else if frame_regex.MatchString(line) {
-			match = frame_regex.FindStringSubmatch(line)
-			name := match[1]
-			data := match[2]
-			fmt.Printf("GOT FRAME WITH NAME '%v' AND DATA '%v'\n", name, data)
-		} else {
-			fmt.Printf("CAN'T HANDLE LINE '%v'\n", line)
-		}
-
-	}
-
-	if err := scanner.Err(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error reading input:", err)
-	}
-}
-
-func readWhile(reader *bufio.Reader, wantChar func(char string) bool) (string, error) {
-	var str strings.Builder
-	for {
-		byte, err := reader.Peek(1)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Unable to peek next byte: %s", err))
-		}
-
-		char := string(byte)
-		if wantChar(char) {
-			fmt.Fprintf(&str, char)
-		} else {
-
-		}
-
-	}
+	fmt.Printf("TOKENS: %v", tokens)
 }
 
 func printUsage(program_name string) {

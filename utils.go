@@ -127,11 +127,11 @@ func reverseByteSlice(bytes []byte) {
 }
 
 func fileSize(file *os.File) int {
-    stats, err := file.Stat()
-    if err != nil {
+	stats, err := file.Stat()
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Can't stat file '%v': %s\n", file, err)
-    }
-    return stats.Size()
+	}
+	return int(stats.Size())
 }
 
 func isFileEmpty(file *os.File) bool {
