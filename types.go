@@ -45,6 +45,7 @@ type Item struct {
 type TokenType int
 const (
 	TokenUnknown TokenType = iota
+	TokenEOF
 	TokenFilePath
 	TokenFieldKey
 	TokenFieldValue

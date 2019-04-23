@@ -31,16 +31,14 @@ func (lexer *Lexer) EOF() bool {
 }
 
 func (lexer *Lexer) Next() (Token, error) {
-	var token Token
-
 	if !lexer.More() {
-		return token, nil
+		return lexer.MakeToken(TokenEOF, ""), nil
 	}
 
 	byte, err := lexer.Reader.ReadByte()
 	// The error won't be io.EOF, which is checked by calling `More`.
 	if err != nil {
-		return token, errors.New(fmt.Sprintf("Error while reading next byte: %s", err))
+		return lexer.UnknownToken(), errors.New(fmt.Sprintf("Error while reading next byte: %s", err))
 	}
 
 	char := string(byte)
@@ -53,14 +51,14 @@ func (lexer *Lexer) Next() (Token, error) {
 		if err == nil {
 			return lexer.Next()
 		} else {
-			return token, err
+			return lexer.UnknownToken(), err
 		}
 	} else if char == ":" {
 		err := lexer.DiscardWhitespace()
 		if err == io.EOF {
-			return token, nil
+			return lexer.UnknownToken(), nil
 		} else if err != nil {
-			return token, errors.New(fmt.Sprintf("Error while reading whitespace: %s", err))
+			return lexer.UnknownToken(), errors.New(fmt.Sprintf("Error while reading whitespace: %s", err))
 		}
 		return lexer.ReadFieldValue()
 	} else {
@@ -156,6 +154,10 @@ func (lexer *Lexer) ReadWhile(wantChar func(string) bool) (string, error) {
 func (lexer *Lexer) IgnoreToEOL() error {
 	_, err := lexer.Reader.ReadBytes('\n')
 	return err
+}
+
+func (lexer *Lexer) UnknownToken() Token {
+	return lexer.MakeToken(TokenUnknown, "")
 }
 
 func (lexer *Lexer) MakeToken(kind TokenType, value string) Token {
