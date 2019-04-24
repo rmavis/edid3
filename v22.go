@@ -20,6 +20,7 @@ func v22MakeItem(path string, reader *bufio.Reader) *Item {
 		return v22ReadFrames(reader)
 	}
 	item.PrintFrames = v22PrintFrames
+	//item.IsFrameEditable = makeFrameValidator(V22TAGIDSIZE)
 	return &item
 }
 
@@ -52,12 +53,22 @@ func v22PrintFrames(frames []ID3v2Frame) {
 	keys := v22MakeFrameMap(pull)
 
 	for _, frame := range frames {
-		if ((frame.Header.Id[0:1] == "T") ||
-			(frame.Header.Id[0:1] == "W")) {
+		if v22IsFrameEditable(keys, frame) {
 			fmt.Printf("%v: %v\n", keys[frame.Header.Id], parseString(frame.Body))
-		} else {
-			fmt.Printf("Frame is not text frame (%v)\n", frame.Header.Id)
-		}
+		}//  else {
+		// 	fmt.Printf("Frame is not text frame (%v)\n", frame.Header.Id)
+		// }
+	}
+}
+
+// This function could be replaced with `makeFrameValidator`
+func v22IsFrameEditable(keys map[string]string, frame ID3v2Frame) bool {
+	if ((len(frame.Header.Id) == V22TAGIDSIZE) &&
+		((frame.Header.Id[0:1] == "T") || (frame.Header.Id[0:1] == "W"))) {
+		_, present := keys[frame.Header.Id]
+		return present
+	} else {
+		return false
 	}
 }
 

@@ -270,6 +270,19 @@ func makeTagFrame(reader *bufio.Reader, header ID3v2FrameHeader) ID3v2Frame {
 	return frame
 }
 
+func makeFrameValidator(keys map[string]string, size int) func (frame ID3v2Frame) bool {
+	check := func (frame ID3v2Frame) bool {
+		if ((len(frame.Header.Id) == size) &&
+			((frame.Header.Id[0:1] == "T") || (frame.Header.Id[0:1] == "W"))) {
+			_, present := keys[frame.Header.Id]
+			return present
+		} else {
+			return false
+		}
+	}
+	return check
+}
+
 func printItemData(item *Item) {
 	fmt.Printf("[%v:%v]\n", item.Tag.Header.Version, item.Path)
 	item.PrintFrames(item.Tag.Frames)

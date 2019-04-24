@@ -58,12 +58,22 @@ func v24PrintFrames(frames []ID3v2Frame) {
 	keys := v24MakeFrameMap(pull)
 
 	for _, frame := range frames {
-		if ((frame.Header.Id[0:1] == "T") ||
-			(frame.Header.Id[0:1] == "W")) {
+		if v24IsFrameEditable(keys, frame) {
 			fmt.Printf("%v: %v\n", keys[frame.Header.Id], parseString(frame.Body))
-		} else {
-			fmt.Printf("Frame is not text frame (%v)\n", frame.Header.Id)
-		}
+		}//  else {
+		// 	fmt.Printf("Frame is not text frame (%v)\n", frame.Header.Id)
+		// }
+	}
+}
+
+// This function could be replaced with `makeFrameValidator(V24TAGIDSIZE)`
+func v24IsFrameEditable(keys map[string]string, frame ID3v2Frame) bool {
+	if ((len(frame.Header.Id) == V24TAGIDSIZE) &&
+		((frame.Header.Id[0:1] == "T") || (frame.Header.Id[0:1] == "W"))) {
+		_, present := keys[frame.Header.Id]
+		return present
+	} else {
+		return false
 	}
 }
 
