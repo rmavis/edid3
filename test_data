@@ -1,3 +1,4 @@
+# This is a full-line comment.
 [2:/Users/richardmavis/Code/go/src/github.com/rmavis/edid3/mp3/test_220.mp3]
 Title/Songname/Content description: There There
 Lead artist(s)/Lead performer(s)/Soloist(s)/Performing group: Radiohead
@@ -22,3 +23,6 @@ Band/orchestra/accompaniment: Radiohead
 Title/songname/content description: Give Up The Ghost
 ISRC (international standard recording code): GBU4B1100009
 Content type: Alternative
+Mood: "Something
+moo
+dy"

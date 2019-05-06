@@ -111,6 +111,10 @@ func (lexer *Lexer) ReadFieldValue() (Token, error) {
 
 	char := string(byte)
 	if ((char == "\"") || (char == "'")) {
+		_, err := lexer.Reader.Discard(1)
+		if err != nil {
+			return Token{ }, err
+		}
 		bytes, err := lexer.Reader.ReadBytes(byte[0])
 		return lexer.MakeToken(TokenFieldValue, string(bytes[0: (len(bytes) - 1)])), err
 	} else {
