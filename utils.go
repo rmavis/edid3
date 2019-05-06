@@ -50,10 +50,10 @@ func fileHasV2Tag(reader *bufio.Reader) bool {
 	return areBytesOk(reader, 3, checkTag)
 }
 
-func fillItemTag(item *Item, header ID3v2TagHeader, data []byte) {
-	item.FillTagHeader(&header, data)
-	item.Tag.Header = header
-	item.Tag.Frames = item.ReadFrames()
+func fillElementTag(element *Element, header ID3v2TagHeader, data []byte) {
+	element.FillTagHeader(&header, data)
+	element.Tag.Header = header
+	element.Tag.Frames = element.ReadFrames()
 }
 
 // Frame IDs consist of three or four bytes, each in the range
@@ -283,9 +283,9 @@ func makeFrameValidator(keys map[string]string, size int) func (frame ID3v2Frame
 	return check
 }
 
-func printItemData(item *Item) {
-	fmt.Printf("[%v:%v]\n", item.Tag.Header.Version, item.Path)
-	item.PrintFrames(item.Tag.Frames)
+func printElementData(element *Element) {
+	fmt.Printf("[%v:%v]\n", element.Tag.Header.Version, element.Path)
+	element.PrintFrames(element.Tag.Frames)
 }
 
 // This isn't being used?  @TODO

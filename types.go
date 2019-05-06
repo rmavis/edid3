@@ -34,7 +34,7 @@ type ID3v2FrameHeader struct {
 	Flags []byte
 }
 
-type Item struct {
+type Element struct {
 	Path          string
 	Tag           ID3v2Tag
 	FillTagHeader func(*ID3v2TagHeader, []byte)

@@ -12,16 +12,16 @@ const V22TAGIDSIZE int = 3
 const V22TAGSIZESIZE int = 3
 
 
-func v22MakeItem(path string, reader *bufio.Reader) *Item {
-	item := Item{ }
-	item.Path = path
-	item.FillTagHeader = v22FillTagHeader
-	item.ReadFrames = func () []ID3v2Frame {
+func v22MakeElement(path string, reader *bufio.Reader) *Element {
+	element := Element{ }
+	element.Path = path
+	element.FillTagHeader = v22FillTagHeader
+	element.ReadFrames = func () []ID3v2Frame {
 		return v22ReadFrames(reader)
 	}
-	item.PrintFrames = v22PrintFrames
-	//item.IsFrameEditable = makeFrameValidator(V22TAGIDSIZE)
-	return &item
+	element.PrintFrames = v22PrintFrames
+	//element.IsFrameEditable = makeFrameValidator(V22TAGIDSIZE)
+	return &element
 }
 
 func v22FillTagHeader(header *ID3v2TagHeader, data []byte) {

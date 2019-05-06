@@ -13,15 +13,15 @@ const V23TAGSIZESIZE int = 4
 const V23TAGFLAGSSIZE int = 2
 
 
-func v23MakeItem(path string, reader *bufio.Reader) *Item {
-	item := Item{ }
-	item.Path = path
-	item.FillTagHeader = v23FillTagHeader
-	item.ReadFrames = func () []ID3v2Frame {
+func v23MakeElement(path string, reader *bufio.Reader) *Element {
+	element := Element{ }
+	element.Path = path
+	element.FillTagHeader = v23FillTagHeader
+	element.ReadFrames = func () []ID3v2Frame {
 		return v23ReadFrames(reader)
 	}
-	item.PrintFrames = v23PrintFrames
-	return &item
+	element.PrintFrames = v23PrintFrames
+	return &element
 }
 
 func v23FillTagHeader(header *ID3v2TagHeader, data []byte) {
